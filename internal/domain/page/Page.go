@@ -60,10 +60,6 @@ type Page[T any] struct {
 	HasNextPage bool
 }
 
-type Item interface {
-	PagePosition() Position
-}
-
 // CutPage обрезает отсортированную выборку по правилу LIMIT first+1.
 // Копируется срез; за независимость вложенных полей элементов отвечает хранилище.
 func CutPage[T Item](fetched []T, first int) (Page[T], error) {

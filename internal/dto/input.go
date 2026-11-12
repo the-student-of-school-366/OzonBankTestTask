@@ -1,5 +1,3 @@
-// Package dto содержит входные параметры и плоские ответы API.
-// Идентичность автора передаётся из контекста операции отдельно от входных DTO.
 package dto
 
 import (
@@ -74,8 +72,6 @@ func (input SetCommentsEnabledInput) ToParams(actorID string) (SetCommentsEnable
 	return SetCommentsEnabledParams{PostID: id, ActorID: actorID, Enabled: input.Enabled}, nil
 }
 
-// ParseID принимает UUID в стандартном формате с дефисами, кроме нулевого UUID.
-// Используется также для аргументов Query.post и Query.comment.
 func ParseID(value string) (uuid.UUID, error) {
 	if len(value) != 36 {
 		return uuid.Nil, domain.ErrInvalidID
