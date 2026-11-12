@@ -8,11 +8,12 @@ import (
 
 // Config ограничивает ресурсы одной HTTP-операции. Нулевые значения заменяются значениями по умолчанию.
 type Config struct {
-	MaxBodyBytes   int64
-	RequestTimeout time.Duration
-	MaxDepth       int
-	MaxComplexity  int
-	Logger         *slog.Logger
+	MaxBodyBytes     int64
+	RequestTimeout   time.Duration
+	MaxDepth         int
+	MaxComplexity    int
+	Logger           *slog.Logger
+	WebsocketOrigins []string
 }
 
 func (c Config) withDefaults() (Config, error) {

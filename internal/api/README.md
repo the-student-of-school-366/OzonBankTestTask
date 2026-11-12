@@ -7,10 +7,13 @@
 
 - `internal/api`: публичный `NewHandler`, конфигурация и HTTP-ограничения.
 - `internal/infrastructure/middleware`: request ID, демонстрационный actor ID и HTTP-таймаут.
+- `internal/infrastructure/pubsub`: хаб событий с ограниченными очередями и числом подписок.
+- `internal/usecase/subscription`: проверка существования поста, подписка и преобразование событий в DTO.
 - `internal/graphql`: схема `schema.graphqls`, резолверы и настройка gqlgen в `server.go`.
 - `internal/graphql/loader`: пакетная загрузка, ключи страниц и кэш одной операции.
 - `internal/graphql/gqlerrors`: преобразование ошибок в безопасные GraphQL-ответы.
 - `internal/graphql/limits`: проверка глубины и стоимости операций.
+- `internal/graphql/ws`: WebSocket-адаптер с ограничением времени записи и остановкой соединений.
 - `internal/graphql/generated`: сгенерированный исполнитель схемы.
 - `internal/requestctx`: actor ID и request ID, общие для HTTP и GraphQL.
 
@@ -26,17 +29,28 @@
 контекста. `Timeout` ограничивает ожидание ответа даже при зависимости, игнорирующей
 отмену контекста. Тело ошибки таймаута задаётся в `api`, поэтому пакет middleware
 не зависит от GraphQL. Этот таймаут буферизует ответ и предназначен для обычных
-HTTP-операций; для будущих WebSocket-подписок потребуется отдельная цепочка.
+HTTP-операций. WebSocket upgrade проходит через `RequestID` и `DemoActor`, а затем
+напрямую в GraphQL-сервер. Query/mutation по WebSocket получают отдельный deadline
+операции, подписка живёт до отмены, отключения клиента или остановки сервера.
 
 ## Подключение
 
-После создания репозиториев и usecase:
+После создания репозиториев:
 
-```
-graph, err := api.NewHandler(postUseCase, commentUseCase, api.Config{})
+```go
+hub, err := pubsub.New(pubsub.Config{BufferSize: 64, MaxSubscriptions: 1024})
 if err != nil {
     return err
 }
+defer hub.Close()
+posts := postusecase.New(postRepository)
+comments := commentusecase.New(commentRepository, hub)
+subscriptions := subscription.New(posts, hub)
+graph, err := api.NewHandler(posts, comments, subscriptions, api.Config{})
+if err != nil {
+    return err
+}
+defer graph.Close()
 mux := http.NewServeMux()
 mux.Handle("/graphql", graph)
 server := &http.Server{
@@ -49,11 +63,18 @@ server := &http.Server{
 ```
 
 Это пример сборки зависимостей, а не готовый исполняемый сервис: реализации хранилища
-и запуск в `cmd/service` добавляются отдельно. GraphQL subscriptions относятся к следующему
-этапу и пока не включены в схему или HTTP-транспорты.
+и запуск в `cmd/service` добавляются отдельно. Один и тот же `hub` нужно передать
+в usecase создания комментария и в usecase подписки. `NewHandler` теперь принимает
+usecase подписок третьим аргументом и возвращает `*api.Handler` с методом `Close()`.
+
+При остановке вызвать `graph.Close()` и `hub.Close()`, затем `server.Shutdown(ctx)`.
+`graph.Close()` отменяет активные WebSocket-соединения, включая ожидающие
+`connection_init`; один `http.Server.Shutdown` не закрывает hijacked-сокеты.
 
 Поддерживаются POST с `Content-Type: application/json`, GET для query и OPTIONS.
 Мутации через GET и массивы HTTP batch-запросов не принимаются. Introspection включена.
+Для подписок поддерживается GET upgrade на том же `/graphql`, подпротокол строго
+`graphql-transport-ws`. Подписки через обычный HTTP возвращают `BAD_USER_INPUT`.
 
 ## Идентичность
 
@@ -166,6 +187,8 @@ ID запроса также возвращается в `X-Request-ID`; вну�
 - `GRAPHQL_PARSE_FAILED`, `GRAPHQL_VALIDATION_FAILED`: ошибки GraphQL-документа/переменных.
 - `QUERY_TOO_DEEP`, `QUERY_TOO_COMPLEX`, `PAYLOAD_TOO_LARGE`, `TIMEOUT`: превышение ограничений.
 - `CANCELED`: отмена операции, если ещё возможно вернуть ответ.
+- `RESOURCE_EXHAUSTED`: достигнут лимит активных подписок.
+- `UNAVAILABLE`: хаб подписок остановлен.
 
 Нулевые поля `Config` включают значения по умолчанию: 1 MiB входного тела/строки query,
 5 секунд на HTTP-операцию, 20 уровней полей и стоимость 10 000. HTTP-таймаут отменяет
@@ -190,12 +213,68 @@ ID запроса также возвращается в `X-Request-ID`; вну�
 `first`, наличие и значение `after`. Кэш не разделяется между HTTP-запросами;
 после каждой успешной мутации он очищается перед чтением вложенных полей.
 
+## Подписки
+
+```graphql
+subscription Comments($postId: ID!) {
+  commentAdded(postId: $postId) {
+    id
+    postId
+    parentId
+    authorId
+    text
+    createdAt
+    replies(first: 20) { nodes { id text } }
+  }
+}
+```
+
+Подписка публичная, как и чтение постов. Некорректный UUID возвращает `BAD_USER_INPUT`,
+отсутствующий пост — `NOT_FOUND`. Запрет комментирования не запрещает подписку.
+События содержат сохранённые корни и ответы и публикуются usecase после успешной
+записи. Ошибка репозитория не порождает событие; отмена запроса после commit не отменяет
+публикацию. GraphQL не публикует повторное событие поверх usecase.
+
+Для ручной проверки открыть WebSocket `ws://localhost:8080/graphql` с подпротоколом
+`graphql-transport-ws`, отправить `{"type":"connection_init"}` и дождаться
+`connection_ack`. Затем отправить:
+
+```json
+{"id":"comments","type":"subscribe","payload":{"query":"subscription($postId:ID!){commentAdded(postId:$postId){id parentId text}}","variables":{"postId":"UUID существующего поста"}}}
+```
+
+Создать комментарий HTTP-мутацией: сервер пришлёт `next` с `payload.data.commentAdded`.
+Для отмены отправить `{"id":"comments","type":"complete"}`. На `ping` отвечать `pong`.
+Поле `connection_init.payload` не устанавливает actor: идентичность задаётся HTTP
+middleware при upgrade. Браузер может подписываться анонимно, а мутации отправлять POST.
+
+Сервер ждёт `connection_init` до 5 секунд, отправляет ping каждые 15 секунд и
+закрывает соединение без pong; запись ограничена 10 секундами. `MaxBodyBytes` также
+ограничивает размер WebSocket-сообщения. По умолчанию разрешены same-origin и клиенты
+без Origin; дополнительные браузерные origins задаются через `WebsocketOrigins`
+(например, `[]string{"localhost:3000"}`). Глубина и сложность проверяются при запуске
+каждой операции, включая подписку.
+
+Каждое событие получает новый набор загрузчиков в `AroundResponses` перед исполнением
+вложенных резолверов. Используется обычный канал подписки; контекст события наследует
+actor, request ID и отмену подписки. Поэтому вложенные `replies` не используют кэш
+предыдущего события. WebSocket-транспорт
+зарегистрирован перед HTTP ([документация gqlgen](https://gqlgen.com/recipes/subscriptions/)).
+
+Хаб по умолчанию допускает 1024 подписки с очередью из 64 событий на каждую.
+Настройки передаются через `pubsub.Config`. При переполнении медленная подписка
+закрывается, её необработанные события отбрасываются; остальные подписчики продолжают
+работать. После `complete` или разрыва связи клиент перечитывает нужные страницы.
+Доставка действует внутри одного процесса: нет истории, replay, exactly-once и
+согласованного снимка между первым чтением и регистрацией подписки. Сбой между commit
+и publish может потерять событие; межпроцессная доставка потребует внешнего брокера.
+
 ## Генерация и проверки
 
 Из корня репозитория:
 
 ```sh
-go generate ./internal/graphql/...
+go generate ./internal/graphql/... ./internal/usecase/subscription/...
 go test ./internal/api/... ./internal/graphql/... -count=1
 go test ./...
 go vet ./...
@@ -215,3 +294,6 @@ go vet ./...
 и моками репозиториев, включая создание корня/ответа и переход по курсору.
 В `internal/infrastructure/middleware` отдельно проверяются request ID, приоритет actor
 и таймаут. Тесты таймаута используют виртуальное время `testing/synctest`.
+Тесты хаба и usecase подписки лежат рядом с реализациями. WebSocket-интеграция в
+`internal/api/subscription_test.go` проверяет handshake, доставку после записи,
+нескольких клиентов, свежий кэш события, ошибки, отмену, остановку, Origin и лимит сообщения.

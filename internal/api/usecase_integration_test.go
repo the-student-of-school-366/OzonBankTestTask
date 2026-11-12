@@ -15,11 +15,13 @@ import (
 	"OzonBankTestTask/internal/domain/page"
 	domainpost "OzonBankTestTask/internal/domain/post"
 	"OzonBankTestTask/internal/dto"
+	"OzonBankTestTask/internal/infrastructure/pubsub"
 	"OzonBankTestTask/internal/usecase"
 	commentusecase "OzonBankTestTask/internal/usecase/comment"
 	commentmocks "OzonBankTestTask/internal/usecase/comment/mocks"
 	postusecase "OzonBankTestTask/internal/usecase/post"
 	postmocks "OzonBankTestTask/internal/usecase/post/mocks"
+	"OzonBankTestTask/internal/usecase/subscription"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -29,9 +31,14 @@ func TestHTTPWithRealUseCases(t *testing.T) {
 	postRepository, commentRepository := postmocks.NewRepository(t), commentmocks.NewRepository(t)
 	now := time.Date(2026, 11, 12, 15, 0, 0, 123456000, time.FixedZone("MSK", 3*3600))
 	posts := postusecase.New(postRepository, usecase.WithClock(func() time.Time { return now }))
-	comments := commentusecase.New(commentRepository, nil, usecase.WithClock(func() time.Time { return now }))
-	h, err := api.NewHandler(posts, comments, api.Config{Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	hub, err := pubsub.New(pubsub.Config{})
 	require.NoError(t, err)
+	t.Cleanup(hub.Close)
+	comments := commentusecase.New(commentRepository, hub, usecase.WithClock(func() time.Time { return now }))
+	subscriptions := subscription.New(posts, hub)
+	h, err := api.NewHandler(posts, comments, subscriptions, api.Config{Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	require.NoError(t, err)
+	t.Cleanup(h.Close)
 	var saved domainpost.Post
 	postRepository.On("CreatePost", mock.Anything, mock.Anything).Return(func(ctx context.Context, value domainpost.Post) (domainpost.Post, error) {
 		saved = value
