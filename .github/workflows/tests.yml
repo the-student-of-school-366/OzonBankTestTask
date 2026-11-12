@@ -1,0 +1,38 @@
+name: Go tests
+
+on:
+  push:
+    branches:
+      - '**'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Vet and tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CGO_ENABLED: '1'
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run tests with race detector
+        run: go test -race -count=1 -timeout=5m ./...
