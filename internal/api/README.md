@@ -37,7 +37,7 @@ HTTP-операций. WebSocket upgrade проходит через `RequestID`
 
 После создания репозиториев:
 
-```go
+```
 hub, err := pubsub.New(pubsub.Config{BufferSize: 64, MaxSubscriptions: 1024})
 if err != nil {
     return err
@@ -62,8 +62,10 @@ server := &http.Server{
 }
 ```
 
-Это пример сборки зависимостей, а не готовый исполняемый сервис: реализации хранилища
-и запуск в `cmd/service` добавляются отдельно. Один и тот же `hub` нужно передать
+Это пример сборки зависимостей; запуск в `cmd/service` добавляется отдельно.
+Репозитории PostgreSQL и создание общего пула описаны в
+[README PostgreSQL](../repositories/postgres/README.md), а реализация в памяти — в
+[README memory](../repositories/memory/README.md). Один и тот же `hub` нужно передать
 в usecase создания комментария и в usecase подписки. `NewHandler` теперь принимает
 usecase подписок третьим аргументом и возвращает `*api.Handler` с методом `Close()`.
 
