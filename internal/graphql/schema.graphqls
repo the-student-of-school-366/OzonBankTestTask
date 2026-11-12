@@ -1,0 +1,60 @@
+scalar Time
+
+type PageInfo {
+  endCursor: String
+  hasNextPage: Boolean!
+}
+
+type PostConnection {
+  nodes: [Post!]!
+  pageInfo: PageInfo!
+}
+
+type CommentConnection {
+  nodes: [Comment!]!
+  pageInfo: PageInfo!
+}
+
+type Post {
+  id: ID!
+  title: String!
+  content: String!
+  authorId: ID!
+  commentsEnabled: Boolean!
+  createdAt: Time!
+  comments(first: Int! = 20, after: String): CommentConnection!
+}
+
+type Comment {
+  id: ID!
+  postId: ID!
+  parentId: ID
+  authorId: ID!
+  text: String!
+  createdAt: Time!
+  replies(first: Int! = 20, after: String): CommentConnection!
+}
+
+input CreatePostInput {
+  title: String!
+  content: String!
+  commentsEnabled: Boolean! = true
+}
+
+input CreateCommentInput {
+  postId: ID!
+  parentId: ID
+  text: String!
+}
+
+type Query {
+  posts(first: Int! = 20, after: String): PostConnection!
+  post(id: ID!): Post
+  comment(id: ID!): Comment
+}
+
+type Mutation {
+  createPost(input: CreatePostInput!): Post!
+  setCommentsEnabled(postId: ID!, enabled: Boolean!): Post!
+  createComment(input: CreateCommentInput!): Comment!
+}
