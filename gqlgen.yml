@@ -1,0 +1,43 @@
+schema:
+  - internal/graphql/schema.graphqls
+exec:
+  filename: internal/graphql/generated/generated.go
+  package: generated
+  worker_limit: 100
+model:
+  filename: internal/graphql/generated/models_gen.go
+  package: generated
+resolver:
+  layout: follow-schema
+  dir: internal/graphql
+  package: graphql
+  filename_template: "{name}.resolvers.go"
+  omit_template_comment: true
+omit_slice_element_pointers: true
+omit_root_models: true
+skip_mod_tidy: true
+models:
+  ID:
+    model: github.com/99designs/gqlgen/graphql.ID
+  Time:
+    model: github.com/99designs/gqlgen/graphql.Time
+  Post:
+    model: OzonBankTestTask/internal/dto.Post
+    fields:
+      comments:
+        resolver: true
+  Comment:
+    model: OzonBankTestTask/internal/dto.Comment
+    fields:
+      replies:
+        resolver: true
+  PageInfo:
+    model: OzonBankTestTask/internal/dto.PageInfo
+  PostConnection:
+    model: OzonBankTestTask/internal/dto.PostConnection
+  CommentConnection:
+    model: OzonBankTestTask/internal/dto.CommentConnection
+  CreatePostInput:
+    model: OzonBankTestTask/internal/dto.CreatePostInput
+  CreateCommentInput:
+    model: OzonBankTestTask/internal/dto.CreateCommentInput
