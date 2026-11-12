@@ -1,4 +1,3 @@
-// Package pagination кодирует позиции выдачи, не обращаясь к хранилищу.
 package pagination
 
 import (
