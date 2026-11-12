@@ -7,6 +7,7 @@ import (
 
 	"OzonBankTestTask/internal/domain"
 	"OzonBankTestTask/internal/requestctx"
+	"OzonBankTestTask/internal/usecase/subscription"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/vektah/gqlparser/v2/gqlerror"
@@ -22,6 +23,10 @@ func NewPresenter(logger *slog.Logger) graphql.ErrorPresenterFunc {
 		var business domain.Error
 		var clientError *gqlerror.Error
 		switch {
+		case errors.Is(err, subscription.ErrLimitReached):
+			code, message = "RESOURCE_EXHAUSTED", subscription.ErrLimitReached.Error()
+		case errors.Is(err, subscription.ErrClosed):
+			code, message = "UNAVAILABLE", subscription.ErrClosed.Error()
 		case errors.Is(err, requestctx.ErrUnauthenticated):
 			code, message = "UNAUTHENTICATED", requestctx.ErrUnauthenticated.Error()
 		case errors.Is(err, context.DeadlineExceeded):

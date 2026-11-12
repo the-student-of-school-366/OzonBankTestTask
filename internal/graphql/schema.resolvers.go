@@ -84,6 +84,10 @@ func (r *queryResolver) Comment(ctx context.Context, id string) (*dto.Comment, e
 	return loader.FromContext(ctx).Comment(ctx, id)
 }
 
+func (r *subscriptionResolver) CommentAdded(ctx context.Context, postID string) (<-chan *dto.Comment, error) {
+	return r.commentEvents(ctx, postID)
+}
+
 func (r *Resolver) Comment() generated.CommentResolver { return &commentResolver{r} }
 
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
@@ -92,9 +96,12 @@ func (r *Resolver) Post() generated.PostResolver { return &postResolver{r} }
 
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
+func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subscriptionResolver{r} }
+
 type (
-	commentResolver  struct{ *Resolver }
-	mutationResolver struct{ *Resolver }
-	postResolver     struct{ *Resolver }
-	queryResolver    struct{ *Resolver }
+	commentResolver      struct{ *Resolver }
+	mutationResolver     struct{ *Resolver }
+	postResolver         struct{ *Resolver }
+	queryResolver        struct{ *Resolver }
+	subscriptionResolver struct{ *Resolver }
 )

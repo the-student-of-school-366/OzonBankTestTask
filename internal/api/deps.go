@@ -6,3 +6,4 @@ import "OzonBankTestTask/internal/graphql"
 // находятся в internal/graphql/deps.go рядом с резолверами.
 type PostUseCase = graphql.PostUseCase
 type CommentUseCase = graphql.CommentUseCase
+type SubscriptionUseCase = graphql.SubscriptionUseCase

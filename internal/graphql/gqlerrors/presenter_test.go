@@ -12,6 +12,7 @@ import (
 	"OzonBankTestTask/internal/domain"
 	"OzonBankTestTask/internal/graphql/gqlerrors"
 	"OzonBankTestTask/internal/requestctx"
+	"OzonBankTestTask/internal/usecase/subscription"
 
 	"github.com/stretchr/testify/require"
 )
@@ -23,6 +24,7 @@ func TestGraphQLErrorMapping(t *testing.T) {
 		err  error
 		code string
 	}{
+		{subscription.ErrLimitReached, "RESOURCE_EXHAUSTED"}, {subscription.ErrClosed, "UNAVAILABLE"},
 		{domain.ErrNotAuthor, "FORBIDDEN"}, {domain.ErrPostNotFound, "NOT_FOUND"},
 		{domain.ErrCommentNotFound, "NOT_FOUND"}, {domain.ErrCommentsDisabled, "COMMENTS_DISABLED"},
 		{domain.ErrParentPostMismatch, "PARENT_POST_MISMATCH"}, {domain.ErrInvalidCursor, "BAD_USER_INPUT"},

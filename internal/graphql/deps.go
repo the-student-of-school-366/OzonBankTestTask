@@ -22,3 +22,7 @@ type CommentUseCase interface {
 	loader.CommentReader
 	Create(context.Context, string, dto.CreateCommentInput) (dto.Comment, error)
 }
+
+type SubscriptionUseCase interface {
+	CommentAdded(context.Context, string) (<-chan dto.Comment, error)
+}

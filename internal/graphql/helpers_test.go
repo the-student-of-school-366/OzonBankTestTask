@@ -39,7 +39,10 @@ func newServer(t *testing.T, config limits.Config) (http.Handler, *mocks.PostUse
 		config.MaxComplexity = 10_000
 	}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	h := gqlapi.NewServer(posts, comments, config, logger)
+	h := gqlapi.NewServer(posts, comments, mocks.NewSubscriptionUseCase(t), gqlapi.Config{
+		Limits: config, Logger: logger, RequestTimeout: 5 * time.Second, MaxMessageBytes: 1 << 20,
+	})
+	t.Cleanup(h.Close)
 	return h, posts, comments
 }
 
