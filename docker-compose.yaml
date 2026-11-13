@@ -1,16 +1,35 @@
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      CONFIG_FILE: ${CONFIG_FILE:-}
+      STORAGE: ${STORAGE:-}
+      PGHOST: ${PGHOST:-postgres}
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_USER:-}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-}
+      PGDATABASE: ${POSTGRES_DB:-}
+    ports:
+      - "127.0.0.1:${APP_PORT:-8081}:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    stop_grace_period: 15s
+
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_DB: ozon_bank
-      POSTGRES_USER: ozon
+      POSTGRES_DB: ${POSTGRES_DB:-ozon_bank}
+      POSTGRES_USER: ${POSTGRES_USER:-ozon}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ozon_dev}
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-55432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ozon -d ozon_bank"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 5s
       timeout: 3s
       retries: 10

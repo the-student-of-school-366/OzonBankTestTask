@@ -22,7 +22,7 @@
 
 ```powershell
 docker compose up -d --wait postgres
-$env:DATABASE_URL='postgres://ozon:ozon_dev@localhost:5432/ozon_bank?sslmode=disable'
+$env:DATABASE_URL='postgres://ozon:ozon_dev@localhost:55432/ozon_bank?sslmode=disable'
 go run ./cmd/migrate
 ```
 
@@ -70,8 +70,8 @@ subscriptions := subscription.New(posts, hub)
 Создание `hub` и HTTP/GraphQL-обработчика описано в
 [README API](../../api/README.md). Один пул обслуживает оба репозитория весь срок
 работы сервиса. Закрывать его нужно после остановки обработчиков и завершения
-текущих запросов. `cmd/service` пока не содержит сборку приложения;
-`cmd/migrate` — отдельная исполняемая команда для подготовки БД.
+текущих запросов. `cmd/service` собирает приложение и применяет миграции при
+`STORAGE=postgres`; `cmd/migrate` — отдельная команда для подготовки БД.
 
 Миграции можно выполнить отдельным шагом перед запуском приложения. В этом случае
 в приложении достаточно вызвать `Open`. Без применённых миграций он вернёт ошибку

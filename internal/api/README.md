@@ -54,7 +54,7 @@ defer graph.Close()
 mux := http.NewServeMux()
 mux.Handle("/graphql", graph)
 server := &http.Server{
-    Addr:              ":8080",
+    Addr:              ":8081",
     Handler:           mux,
     ReadHeaderTimeout: 5 * time.Second,
     ReadTimeout:       10 * time.Second,
@@ -62,14 +62,14 @@ server := &http.Server{
 }
 ```
 
-Это пример сборки зависимостей; запуск в `cmd/service` добавляется отдельно.
+Готовая сборка зависимостей и запуск HTTP находятся в `cmd/service`.
 Репозитории PostgreSQL и создание общего пула описаны в
 [README PostgreSQL](../repositories/postgres/README.md), а реализация в памяти — в
 [README memory](../repositories/memory/README.md). Один и тот же `hub` нужно передать
 в usecase создания комментария и в usecase подписки. `NewHandler` теперь принимает
 usecase подписок третьим аргументом и возвращает `*api.Handler` с методом `Close()`.
 
-При остановке вызвать `graph.Close()` и `hub.Close()`, затем `server.Shutdown(ctx)`.
+При остановке вызвать `graph.Close()`, затем `server.Shutdown(ctx)` и `hub.Close()`.
 `graph.Close()` отменяет активные WebSocket-соединения, включая ожидающие
 `connection_init`; один `http.Server.Shutdown` не закрывает hijacked-сокеты.
 
@@ -237,7 +237,7 @@ subscription Comments($postId: ID!) {
 записи. Ошибка репозитория не порождает событие; отмена запроса после commit не отменяет
 публикацию. GraphQL не публикует повторное событие поверх usecase.
 
-Для ручной проверки открыть WebSocket `ws://localhost:8080/graphql` с подпротоколом
+Для ручной проверки открыть WebSocket `ws://localhost:8081/graphql` с подпротоколом
 `graphql-transport-ws`, отправить `{"type":"connection_init"}` и дождаться
 `connection_ack`. Затем отправить:
 

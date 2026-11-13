@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"time"
 
+	appconfig "OzonBankTestTask/internal/config"
 	"OzonBankTestTask/internal/repositories/postgres"
 )
 
@@ -15,7 +16,11 @@ func main() {
 	defer stop()
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
-	if err := postgres.Migrate(ctx, postgres.Config{DSN: os.Getenv("DATABASE_URL")}); err != nil {
+	settings, err := appconfig.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := postgres.Migrate(ctx, postgres.Config{DSN: settings.DatabaseURL}); err != nil {
 		log.Fatal(err)
 	}
 	log.Print("database migrations applied")

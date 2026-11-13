@@ -1,0 +1,14 @@
+storage: postgres
+
+http:
+  host: "0.0.0.0"
+  port: 8081
+  shutdown_timeout: 10s
+
+postgres:
+  host: localhost
+  port: 55432
+  user: ozon
+  password: ozon_dev
+  database: ozon_bank
+  sslmode: disable
