@@ -49,7 +49,7 @@ internal/config                     YAML и переменные окружен�
 
 ### Непрерывная проверка
 
-При каждом push GitHub Actions поднимает PostgreSQL 17 и запускает `go vet ./...`, затем `go test -race ./...`. В задание передаётся `TEST_DATABASE_URL`, поэтому вместе с модульными тестами идут проверки базы. Описание workflow лежит в `.github/workflows/tests.yml`.
+При каждом push GitHub Actions поднимает PostgreSQL 17 и запускает `go vet ./...`, затем `go test -race ./...`. В задание передаётся `TEST_DATABASE_URL`, поэтому вместе с модульными тестами идут проверки базы. Описание workflow лежит в `.github/workflows/tests.yml`. Отдельный прогон под нагрузкой описан в [отчёте](docs/load-test.md).
 
 ### Журнал
 
