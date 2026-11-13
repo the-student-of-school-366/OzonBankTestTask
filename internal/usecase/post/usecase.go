@@ -31,7 +31,7 @@ func (u *UseCase) Create(ctx context.Context, actorID string, input dto.CreatePo
 	}
 	saved, err := u.repository.CreatePost(ctx, *value)
 	if err != nil {
-		return dto.Post{}, usecase.StorageError("создание поста", err)
+		return dto.Post{}, usecase.StorageError(ctx, "создание поста", err)
 	}
 	return dto.PostFromDomain(saved), nil
 }
@@ -56,7 +56,7 @@ func (u *UseCase) GetMany(ctx context.Context, ids []string) ([]*dto.Post, error
 	}
 	values, err := usecase.LoadByIDs(ctx, parsed, u.repository.PostsByID)
 	if err != nil {
-		return nil, usecase.StorageError("чтение постов", err)
+		return nil, usecase.StorageError(ctx, "чтение постов", err)
 	}
 	result := make([]*dto.Post, len(parsed))
 	for i, id := range parsed {
@@ -78,7 +78,7 @@ func (u *UseCase) List(ctx context.Context, input dto.PageInput) (dto.PostConnec
 	}
 	values, err := u.repository.ListPosts(ctx, request)
 	if err != nil {
-		return dto.PostConnection{}, usecase.StorageError("список постов", err)
+		return dto.PostConnection{}, usecase.StorageError(ctx, "список постов", err)
 	}
 	result, err := dto.PostConnectionFromDomain(values)
 	if err != nil {
@@ -98,7 +98,7 @@ func (u *UseCase) SetCommentsEnabled(ctx context.Context, actorID string, input 
 	// Не читать пост перед обновлением: проверка автора принадлежит атомарному методу.
 	saved, err := u.repository.SetCommentsEnabled(ctx, params.PostID, params.ActorID, params.Enabled)
 	if err != nil {
-		return dto.Post{}, usecase.StorageError("изменение настроек комментариев", err)
+		return dto.Post{}, usecase.StorageError(ctx, "изменение настроек комментариев", err)
 	}
 	return dto.PostFromDomain(saved), nil
 }

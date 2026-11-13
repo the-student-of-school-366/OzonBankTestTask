@@ -9,78 +9,21 @@ import (
 	"net/http"
 	"time"
 
-	"OzonBankTestTask/internal/api"
 	"OzonBankTestTask/internal/api/handler"
-	"OzonBankTestTask/internal/api/sandbox"
 	"OzonBankTestTask/internal/infrastructure/pubsub"
-	"OzonBankTestTask/internal/repositories/memory"
-	"OzonBankTestTask/internal/repositories/postgres"
-	commentrepo "OzonBankTestTask/internal/repositories/postgres/comment"
-	postrepo "OzonBankTestTask/internal/repositories/postgres/post"
-	commentusecase "OzonBankTestTask/internal/usecase/comment"
-	postusecase "OzonBankTestTask/internal/usecase/post"
-	"OzonBankTestTask/internal/usecase/subscription"
 )
 
 type application struct {
-	server       *http.Server
-	graph        *handler.Handler
-	hub          *pubsub.Hub
-	closeStorage func()
-}
-
-func newApplication(ctx context.Context, c config) (*application, error) {
-	var posts postusecase.Repository
-	var comments commentusecase.Repository
-	closeStorage := func() {}
-	switch c.storage {
-	case "memory":
-		store := memory.New()
-		posts, comments = store, store
-	case "postgres":
-		settings := postgres.Config{DSN: c.databaseURL}
-		startup, cancel := context.WithTimeout(ctx, 2*time.Minute)
-		defer cancel()
-		if err := postgres.Migrate(startup, settings); err != nil {
-			return nil, fmt.Errorf("apply migrations: %w", err)
-		}
-		pool, err := postgres.Open(startup, settings)
-		if err != nil {
-			return nil, fmt.Errorf("open postgres: %w", err)
-		}
-		posts, comments = postrepo.New(pool), commentrepo.New(pool)
-		closeStorage = pool.Close
-	default:
-		return nil, fmt.Errorf("unknown storage %q", c.storage)
-	}
-	hub, err := pubsub.New(pubsub.Config{})
-	if err != nil {
-		closeStorage()
-		return nil, fmt.Errorf("create event hub: %w", err)
-	}
-	postService := postusecase.New(posts)
-	commentService := commentusecase.New(comments, hub)
-	graph, err := handler.NewHandler(postService, commentService, subscription.New(postService, hub), api.Config{})
-	if err != nil {
-		hub.Close()
-		closeStorage()
-		return nil, fmt.Errorf("create GraphQL handler: %w", err)
-	}
-	mux := http.NewServeMux()
-	mux.Handle("/graphql", graph)
-	if c.sandboxEnabled {
-		mux.Handle("/sandbox", sandbox.NewHandler())
-	}
-	return &application{
-		server: &http.Server{Addr: c.address, Handler: mux, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second},
-		graph:  graph, hub: hub, closeStorage: closeStorage,
-	}, nil
+	server    *http.Server
+	graph     *handler.Handler
+	hub       *pubsub.Hub
+	resources *cleanup
 }
 
 func (a *application) close() {
-	a.graph.Close()
-	a.hub.Close()
-	a.closeStorage()
+	if a.resources != nil {
+		a.resources.Close()
+	}
 }
 
 func (a *application) serve(ctx context.Context, listener net.Listener, timeout time.Duration) error {
@@ -95,6 +38,7 @@ func (a *application) serve(ctx context.Context, listener net.Listener, timeout 
 		return fmt.Errorf("serve HTTP: %w", err)
 	case <-ctx.Done():
 		// Shutdown не закрывает WebSocket после upgrade.
+		slog.Info("shutdown started", "timeout", timeout.String())
 		a.graph.Close()
 		shutdown, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
@@ -107,6 +51,7 @@ func (a *application) serve(ctx context.Context, listener net.Listener, timeout 
 		if err = <-finished; err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return fmt.Errorf("serve HTTP: %w", err)
 		}
+		slog.Info("shutdown finished")
 		return nil
 	}
 }

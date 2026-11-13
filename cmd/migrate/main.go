@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"time"
@@ -18,10 +18,12 @@ func main() {
 	defer cancel()
 	settings, err := appconfig.Load()
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("migrations failed", "error", err)
+		os.Exit(1)
 	}
 	if err := postgres.Migrate(ctx, postgres.Config{DSN: settings.DatabaseURL}); err != nil {
-		log.Fatal(err)
+		slog.Error("migrations failed", "error", err)
+		os.Exit(1)
 	}
-	log.Print("database migrations applied")
+	slog.Info("database migrations applied")
 }
