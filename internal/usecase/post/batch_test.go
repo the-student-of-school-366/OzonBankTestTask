@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"OzonBankTestTask/internal/domain/page"
 	"OzonBankTestTask/internal/domain/post"
 	"OzonBankTestTask/internal/dto"
 	"OzonBankTestTask/internal/usecase"
@@ -15,7 +16,7 @@ import (
 )
 
 func TestIDBatchLimitAndDeduplication(t *testing.T) {
-	count := 2*usecase.MaxBatchSize + 1
+	count := 2*page.MaxBatchSize + 1
 	ids := make([]string, count)
 	for i := range ids {
 		ids[i] = uuid.NewString()
@@ -23,11 +24,11 @@ func TestIDBatchLimitAndDeduplication(t *testing.T) {
 	ids = append(ids, ids[0])
 	calls := 0
 	check := func(keys []uuid.UUID) {
-		if len(keys) == 0 || len(keys) > usecase.MaxBatchSize {
+		if len(keys) == 0 || len(keys) > page.MaxBatchSize {
 			t.Fatalf("размер batch: %d", len(keys))
 		}
 		for i, key := range keys {
-			if key.String() != ids[calls*usecase.MaxBatchSize+i] {
+			if key.String() != ids[calls*page.MaxBatchSize+i] {
 				t.Fatal("нарушен порядок ключей")
 			}
 		}
@@ -53,7 +54,7 @@ func TestIDBatchLimitAndDeduplication(t *testing.T) {
 }
 
 func TestCancellationBetweenBatches(t *testing.T) {
-	ids := make([]string, usecase.MaxBatchSize+1)
+	ids := make([]string, page.MaxBatchSize+1)
 	for i := range ids {
 		ids[i] = uuid.NewString()
 	}

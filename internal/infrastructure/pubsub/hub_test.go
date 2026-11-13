@@ -6,8 +6,8 @@ import (
 	"testing"
 	"testing/synctest"
 
+	"OzonBankTestTask/internal/broker"
 	"OzonBankTestTask/internal/domain/comment"
-	"OzonBankTestTask/internal/usecase/subscription"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -69,7 +69,7 @@ func TestLimitsCancellationAndShutdown(t *testing.T) {
 		stream, err := hub.Subscribe(ctx, uuid.New())
 		require.NoError(t, err)
 		_, err = hub.Subscribe(context.Background(), uuid.New())
-		require.ErrorIs(t, err, subscription.ErrLimitReached)
+		require.ErrorIs(t, err, broker.ErrLimitReached)
 		cancel()
 		synctest.Wait()
 		<-stream.Done
@@ -84,7 +84,7 @@ func TestLimitsCancellationAndShutdown(t *testing.T) {
 		_, open := <-stream.Comments
 		require.False(t, open)
 		_, err = hub.Subscribe(context.Background(), uuid.New())
-		require.ErrorIs(t, err, subscription.ErrClosed)
+		require.ErrorIs(t, err, broker.ErrClosed)
 		hub.Publish(comment.Comment{PostID: uuid.New()})
 		require.Zero(t, hub.count)
 	})

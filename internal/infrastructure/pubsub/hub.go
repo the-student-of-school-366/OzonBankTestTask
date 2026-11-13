@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
+	"OzonBankTestTask/internal/broker"
 	"OzonBankTestTask/internal/domain/comment"
-	"OzonBankTestTask/internal/usecase/subscription"
 
 	"github.com/google/uuid"
 )
@@ -45,17 +45,17 @@ func New(config Config) (*Hub, error) {
 	return &Hub{config: config, byPost: make(map[uuid.UUID]map[*subscriber]struct{})}, nil
 }
 
-func (h *Hub) Subscribe(ctx context.Context, postID uuid.UUID) (subscription.Stream, error) {
+func (h *Hub) Subscribe(ctx context.Context, postID uuid.UUID) (broker.Stream, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if err := ctx.Err(); err != nil {
-		return subscription.Stream{}, err
+		return broker.Stream{}, err
 	}
 	if h.closed {
-		return subscription.Stream{}, subscription.ErrClosed
+		return broker.Stream{}, broker.ErrClosed
 	}
 	if h.count >= h.config.MaxSubscriptions {
-		return subscription.Stream{}, subscription.ErrLimitReached
+		return broker.Stream{}, broker.ErrLimitReached
 	}
 	s := &subscriber{postID: postID, comments: make(chan comment.Comment, h.config.BufferSize), done: make(chan struct{})}
 	if h.byPost[postID] == nil {
@@ -69,8 +69,10 @@ func (h *Hub) Subscribe(ctx context.Context, postID uuid.UUID) (subscription.Str
 		h.remove(s)
 	}
 	s.stop = context.AfterFunc(ctx, cancel)
-	return subscription.Stream{Comments: s.comments, Done: s.done, Cancel: cancel}, nil
+	return broker.Stream{Comments: s.comments, Done: s.done, Cancel: cancel}, nil
 }
+
+var _ broker.Broker = (*Hub)(nil)
 
 // Publish не ждёт читателей. Переполнение завершает только медленную подписку.
 // Отправка и закрытие канала защищены одним mutex, копия ParentID своя для каждого читателя.

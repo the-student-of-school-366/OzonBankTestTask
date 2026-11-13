@@ -11,6 +11,9 @@ import (
 const DefaultPageSize = 20
 const MaxPageSize = 100
 
+// MaxBatchSize ограничивает число ключей одного обращения к хранилищу.
+const MaxBatchSize = 100
+
 // Position — неизменяемая пара сортировки (created_at, id).
 // Следующая страница при сортировке DESC содержит строго меньшие пары.
 type Position struct {

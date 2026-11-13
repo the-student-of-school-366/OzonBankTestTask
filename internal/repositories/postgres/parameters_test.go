@@ -7,7 +7,6 @@ import (
 	"OzonBankTestTask/internal/domain"
 	"OzonBankTestTask/internal/domain/page"
 	"OzonBankTestTask/internal/repositories/postgres"
-	"OzonBankTestTask/internal/usecase"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -26,7 +25,7 @@ func TestPageParametersKeepDuplicatesAndNullableCursors(t *testing.T) {
 }
 
 func TestBatchInputRejectedBeforeQuery(t *testing.T) {
-	_, err := postgres.IDs(make([]uuid.UUID, usecase.MaxBatchSize+1))
+	_, err := postgres.IDs(make([]uuid.UUID, page.MaxBatchSize+1))
 	require.ErrorIs(t, err, domain.ErrInvalidPageSize)
 	_, err = postgres.IDs([]uuid.UUID{uuid.Nil})
 	require.ErrorIs(t, err, domain.ErrInvalidID)

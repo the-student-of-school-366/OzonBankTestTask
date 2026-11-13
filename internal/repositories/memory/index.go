@@ -6,7 +6,6 @@ import (
 
 	"OzonBankTestTask/internal/domain"
 	"OzonBankTestTask/internal/domain/page"
-	"OzonBankTestTask/internal/usecase"
 
 	"github.com/google/uuid"
 )
@@ -26,7 +25,7 @@ func positionsForPage(index []page.Position, request page.Request) []page.Positi
 }
 
 func validateIDs(ids []uuid.UUID) error {
-	if len(ids) > usecase.MaxBatchSize {
+	if len(ids) > page.MaxBatchSize {
 		return domain.ErrInvalidPageSize
 	}
 	for _, id := range ids {

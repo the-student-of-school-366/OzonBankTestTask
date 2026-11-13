@@ -15,6 +15,7 @@ import (
 
 	"OzonBankTestTask/internal/api"
 	"OzonBankTestTask/internal/api/handler"
+	"OzonBankTestTask/internal/broker"
 	"OzonBankTestTask/internal/domain"
 	"OzonBankTestTask/internal/domain/comment"
 	"OzonBankTestTask/internal/domain/page"
@@ -37,7 +38,7 @@ type observedBroker struct {
 	registered, canceled chan struct{}
 }
 
-func (b *observedBroker) Subscribe(ctx context.Context, id uuid.UUID) (subscription.Stream, error) {
+func (b *observedBroker) Subscribe(ctx context.Context, id uuid.UUID) (broker.Stream, error) {
 	stream, err := b.Hub.Subscribe(ctx, id)
 	if err != nil {
 		return stream, err
@@ -64,14 +65,14 @@ func newSubscriptionFixture(t *testing.T, config api.Config) subscriptionFixture
 	t.Helper()
 	hub, err := pubsub.New(pubsub.Config{})
 	require.NoError(t, err)
-	broker := &observedBroker{Hub: hub, registered: make(chan struct{}, 16), canceled: make(chan struct{}, 16)}
+	brokerInst := &observedBroker{Hub: hub, registered: make(chan struct{}, 16), canceled: make(chan struct{}, 16)}
 	posts, comments := graphmocks.NewPostUseCase(t), commentmocks.NewRepository(t)
 	config.Logger = slog.New(slog.NewTextHandler(io.Discard, nil))
-	h, err := handler.NewHandler(posts, commentusecase.New(comments, hub), subscription.New(posts, broker), config)
+	h, err := handler.NewHandler(posts, commentusecase.New(comments, hub), subscription.New(posts, brokerInst), config)
 	require.NoError(t, err)
 	server := httptest.NewServer(h)
 	t.Cleanup(func() { h.Close(); hub.Close(); server.Close() })
-	return subscriptionFixture{handler: h, server: server, posts: posts, comments: comments, broker: broker}
+	return subscriptionFixture{handler: h, server: server, posts: posts, comments: comments, broker: brokerInst}
 }
 
 func socketContext(t *testing.T) context.Context {

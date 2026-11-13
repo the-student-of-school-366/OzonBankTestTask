@@ -3,14 +3,13 @@ package postgres
 import (
 	"OzonBankTestTask/internal/domain"
 	"OzonBankTestTask/internal/domain/page"
-	"OzonBankTestTask/internal/usecase"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func IDs(ids []uuid.UUID) ([]pgtype.UUID, error) {
-	if len(ids) > usecase.MaxBatchSize {
+	if len(ids) > page.MaxBatchSize {
 		return nil, domain.ErrInvalidPageSize
 	}
 	result := make([]pgtype.UUID, len(ids))

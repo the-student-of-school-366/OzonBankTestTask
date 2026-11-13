@@ -6,6 +6,8 @@ import (
 	"testing/synctest"
 	"time"
 
+	eventbroker "OzonBankTestTask/internal/broker"
+	brokermocks "OzonBankTestTask/internal/broker/mocks"
 	"OzonBankTestTask/internal/domain"
 	"OzonBankTestTask/internal/domain/comment"
 	"OzonBankTestTask/internal/dto"
@@ -18,7 +20,7 @@ import (
 )
 
 func TestValidationBeforeSubscribing(t *testing.T) {
-	posts, broker := mocks.NewPostReader(t), mocks.NewBroker(t)
+	posts, broker := mocks.NewPostReader(t), brokermocks.NewBroker(t)
 	u := subscription.New(posts, broker)
 	_, err := u.CommentAdded(context.Background(), "invalid")
 	require.ErrorIs(t, err, domain.ErrInvalidID)
@@ -39,7 +41,7 @@ func TestMissingPostAndReadErrorsDoNotSubscribe(t *testing.T) {
 		{name: "read error", err: domain.ErrStorage, want: domain.ErrStorage},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			posts, broker := mocks.NewPostReader(t), mocks.NewBroker(t)
+			posts, broker := mocks.NewPostReader(t), brokermocks.NewBroker(t)
 			posts.On("GetMany", mock.Anything, mock.Anything).Return(tc.posts, tc.err).Once()
 			_, err := subscription.New(posts, broker).CommentAdded(context.Background(), uuid.NewString())
 			require.ErrorIs(t, err, tc.want)
@@ -48,11 +50,11 @@ func TestMissingPostAndReadErrorsDoNotSubscribe(t *testing.T) {
 }
 
 func TestBrokerErrors(t *testing.T) {
-	for _, want := range []error{subscription.ErrClosed, subscription.ErrLimitReached} {
-		posts, broker := mocks.NewPostReader(t), mocks.NewBroker(t)
+	for _, want := range []error{eventbroker.ErrClosed, eventbroker.ErrLimitReached} {
+		posts, broker := mocks.NewPostReader(t), brokermocks.NewBroker(t)
 		id := uuid.New()
 		posts.On("GetMany", mock.Anything, []string{id.String()}).Return([]*dto.Post{{ID: id.String()}}, nil).Once()
-		broker.On("Subscribe", mock.Anything, id).Return(subscription.Stream{}, want).Once()
+		broker.On("Subscribe", mock.Anything, id).Return(eventbroker.Stream{}, want).Once()
 		_, err := subscription.New(posts, broker).CommentAdded(context.Background(), id.String())
 		require.ErrorIs(t, err, want)
 	}
@@ -61,11 +63,11 @@ func TestBrokerErrors(t *testing.T) {
 func TestEventsAndCancellationWhileConsumerIsBlocked(t *testing.T) {
 	for _, stopBroker := range []bool{false, true} {
 		synctest.Test(t, func(t *testing.T) {
-			posts, broker := mocks.NewPostReader(t), mocks.NewBroker(t)
+			posts, broker := mocks.NewPostReader(t), brokermocks.NewBroker(t)
 			postID, parentID := uuid.New(), uuid.New()
 			posts.On("GetMany", mock.Anything, []string{postID.String()}).Return([]*dto.Post{{ID: postID.String(), CommentsEnabled: false}}, nil).Once()
 			input, done, canceled := make(chan comment.Comment, 1), make(chan struct{}), make(chan struct{})
-			broker.On("Subscribe", mock.Anything, postID).Return(subscription.Stream{Comments: input, Done: done, Cancel: func() { close(canceled) }}, nil).Once()
+			broker.On("Subscribe", mock.Anything, postID).Return(eventbroker.Stream{Comments: input, Done: done, Cancel: func() { close(canceled) }}, nil).Once()
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			output, err := subscription.New(posts, broker).CommentAdded(ctx, postID.String())
