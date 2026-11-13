@@ -5,6 +5,7 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
@@ -40,6 +41,7 @@ func Migrate(ctx context.Context, settings Config) error {
 		return fmt.Errorf("postgres: migration provider: %w", err)
 	}
 	if _, err = provider.Up(ctx); err != nil {
+		slog.ErrorContext(ctx, "postgres migration failed", "error", err)
 		return fmt.Errorf("postgres: migrate: %w", err)
 	}
 	return nil

@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"OzonBankTestTask/internal/repositories/postgres/queries"
 
@@ -29,9 +30,11 @@ func Open(ctx context.Context, settings Config) (*pgxpool.Pool, error) {
 	defer cancel()
 	pool, err := pgxpool.NewWithConfig(startup, config)
 	if err != nil {
+		slog.ErrorContext(ctx, "postgres pool open failed", "error", err)
 		return nil, fmt.Errorf("postgres: create pool: %w", err)
 	}
 	if err = pool.Ping(startup); err != nil {
+		slog.ErrorContext(ctx, "postgres pool ping failed", "error", err)
 		pool.Close()
 		return nil, fmt.Errorf("postgres: initialize pool: %w", err)
 	}

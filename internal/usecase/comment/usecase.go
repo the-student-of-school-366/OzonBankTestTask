@@ -33,7 +33,7 @@ func (u *UseCase) Create(ctx context.Context, actorID string, input dto.CreateCo
 	}
 	saved, err := u.repository.CreateComment(ctx, *value)
 	if err != nil {
-		return dto.Comment{}, usecase.StorageError("создание комментария", err)
+		return dto.Comment{}, usecase.StorageError(ctx, "создание комментария", err)
 	}
 	result := dto.CommentFromDomain(saved)
 	if u.publisher != nil {
@@ -61,7 +61,7 @@ func (u *UseCase) GetMany(ctx context.Context, ids []string) ([]*dto.Comment, er
 	}
 	values, err := usecase.LoadByIDs(ctx, parsed, u.repository.CommentsByID)
 	if err != nil {
-		return nil, usecase.StorageError("чтение комментариев", err)
+		return nil, usecase.StorageError(ctx, "чтение комментариев", err)
 	}
 	result := make([]*dto.Comment, len(parsed))
 	for i, id := range parsed {
@@ -111,7 +111,7 @@ func (u *UseCase) ListRootsBatch(ctx context.Context, inputs []dto.RootPageInput
 	}
 	values, err := usecase.LoadPages(ctx, requests, u.repository.ListRootsBatch)
 	if err != nil {
-		return nil, usecase.StorageError("чтение корней", err)
+		return nil, usecase.StorageError(ctx, "чтение корней", err)
 	}
 	return commentPages(values, scopes)
 }
@@ -136,7 +136,7 @@ func (u *UseCase) ListRepliesBatch(ctx context.Context, inputs []dto.ReplyPageIn
 	}
 	values, err := usecase.LoadPages(ctx, requests, u.repository.ListRepliesBatch)
 	if err != nil {
-		return nil, usecase.StorageError("чтение ответов", err)
+		return nil, usecase.StorageError(ctx, "чтение ответов", err)
 	}
 	return commentPages(values, scopes)
 }
