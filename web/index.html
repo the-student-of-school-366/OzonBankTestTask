@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Разбор обсуждений</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="rail">
+      <p class="eyebrow">Дежурная смена</p>
+      <h1>Разбор обсуждений</h1>
+      <p class="lede">Посты, ветки комментариев и живая подписка. Имя ниже уходит в заголовок <code>X-User-ID</code> и не подтверждает личность.</p>
+
+      <label for="actor">Кто пишет</label>
+      <input id="actor" name="actor" autocomplete="username" value="alice" spellcheck="false">
+      <p class="hint">Очистите поле, чтобы отправить мутацию без имени.</p>
+
+      <label for="page-size">Размер страницы</label>
+      <input id="page-size" name="page-size" inputmode="numeric" value="10">
+      <p class="hint">Сервер принимает значения от 1 до 100.</p>
+
+      <section class="tape" aria-labelledby="tape-title">
+        <div class="tape-head">
+          <h2 id="tape-title">Живая лента</h2>
+          <p id="listen-status">Не слушаем</p>
+        </div>
+        <div class="row">
+          <button id="listen" type="button">Слушать этот пост</button>
+          <button id="stop-listen" type="button" class="quiet">Остановить</button>
+        </div>
+        <ol id="events"></ol>
+      </section>
+    </aside>
+
+    <main class="workspace">
+      <p id="notice" class="notice" role="status" hidden></p>
+
+      <section class="panel" aria-labelledby="posts-title">
+        <header class="panel-head">
+          <h2 id="posts-title">Посты</h2>
+          <button id="reload-posts" type="button" class="quiet">Обновить</button>
+        </header>
+        <form id="post-form">
+          <label for="post-title">Заголовок</label>
+          <input id="post-title" name="title" required maxlength="300">
+          <label for="post-content">Текст</label>
+          <textarea id="post-content" name="content" required rows="4"></textarea>
+          <label class="check"><input id="comments-enabled" type="checkbox" checked> Комментарии сразу открыты</label>
+          <button type="submit">Опубликовать пост</button>
+        </form>
+        <ol id="posts" class="posts"></ol>
+        <button id="more-posts" type="button" class="quiet" hidden>Ещё посты</button>
+      </section>
+
+      <section class="panel thread" aria-labelledby="thread-title">
+        <header class="panel-head">
+          <h2 id="thread-title">Ветка</h2>
+          <button id="toggle-comments" type="button" hidden>Закрыть комментарии</button>
+        </header>
+        <div id="post-view" class="empty">Выберите пост слева или найдите его по идентификатору.</div>
+
+        <form id="comment-form" hidden>
+          <label for="comment-text">Комментарий</label>
+          <textarea id="comment-text" name="text" rows="3" required></textarea>
+          <label for="parent-id">Родитель</label>
+          <input id="parent-id" name="parent" spellcheck="false" placeholder="Пусто — комментарий к посту">
+          <p class="hint">Кнопка «Ответить» подставляет родителя. Чужой идентификатор проверяет запрет ответа в другой пост.</p>
+          <div class="row">
+            <button type="submit">Отправить</button>
+            <button id="clear-parent" type="button" class="quiet">Сделать корнем</button>
+          </div>
+        </form>
+
+        <div class="lookup">
+          <form id="find-post-form" class="lookup-form">
+            <label for="find-post">Идентификатор поста</label>
+            <div class="row">
+              <input id="find-post" spellcheck="false">
+              <button type="submit" class="quiet">Найти</button>
+            </div>
+          </form>
+          <form id="find-comment-form" class="lookup-form">
+            <label for="find-comment">Идентификатор комментария</label>
+            <div class="row">
+              <input id="find-comment" spellcheck="false">
+              <button type="submit" class="quiet">Открыть ветку</button>
+            </div>
+          </form>
+          <div id="branch"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

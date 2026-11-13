@@ -20,7 +20,8 @@ Apollo Sandbox доступен на `http://localhost:8081/sandbox` (для з�
 docker compose up --build -d --wait
 ```
 
-Сервис доступен на `http://localhost:8081/graphql`. Compose ждёт готовности
+Сервис доступен на `http://localhost:8081/graphql`. Страница проверки —
+на `http://localhost:8082`. Compose ждёт готовности
 PostgreSQL перед запуском приложения; приложение применяет миграции при старте.
 Учётные данные и имя базы можно задать через `POSTGRES_USER`, `POSTGRES_PASSWORD`
 и `POSTGRES_DB`. PostgreSQL применяет их при первой инициализации тома: если том
