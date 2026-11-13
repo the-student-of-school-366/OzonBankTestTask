@@ -32,6 +32,7 @@ func NewHandler(posts api.PostUseCase, comments api.CommentUseCase, subscription
 	timed := middleware.Timeout(config.RequestTimeout, timeoutBody)(ordinary)
 	var wrapped http.Handler = routeTransport(server, timed, config.MaxBodyBytes)
 	wrapped = middleware.DemoActor(wrapped)
+	wrapped = middleware.AccessLog(config.Logger)(wrapped)
 	wrapped = middleware.RequestID(wrapped)
 	return &Handler{server: server, handler: responseHeaders(wrapped)}, nil
 }

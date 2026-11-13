@@ -37,6 +37,7 @@ func newApplication(ctx context.Context, c config) (*application, error) {
 	case "memory":
 		store := memory.New()
 		posts, comments = store, store
+		slog.Info("storage ready", "storage", "memory")
 	case "postgres":
 		settings := postgres.Config{DSN: c.databaseURL}
 		startup, cancel := context.WithTimeout(ctx, 2*time.Minute)
@@ -44,12 +45,14 @@ func newApplication(ctx context.Context, c config) (*application, error) {
 		if err := postgres.Migrate(startup, settings); err != nil {
 			return nil, fmt.Errorf("apply migrations: %w", err)
 		}
+		slog.Info("migrations applied")
 		pool, err := postgres.Open(startup, settings)
 		if err != nil {
 			return nil, fmt.Errorf("open postgres: %w", err)
 		}
 		posts, comments = postrepo.New(pool), commentrepo.New(pool)
 		closeStorage = pool.Close
+		slog.Info("storage ready", "storage", "postgres")
 	default:
 		return nil, fmt.Errorf("unknown storage %q", c.storage)
 	}
@@ -70,6 +73,7 @@ func newApplication(ctx context.Context, c config) (*application, error) {
 	mux.Handle("/graphql", graph)
 	if c.sandboxEnabled {
 		mux.Handle("/sandbox", sandbox.NewHandler())
+		slog.Info("apollo sandbox enabled", "path", "/sandbox")
 	}
 	return &application{
 		server: &http.Server{Addr: c.address, Handler: mux, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second},
@@ -95,6 +99,7 @@ func (a *application) serve(ctx context.Context, listener net.Listener, timeout 
 		return fmt.Errorf("serve HTTP: %w", err)
 	case <-ctx.Done():
 		// Shutdown не закрывает WebSocket после upgrade.
+		slog.Info("shutdown started", "timeout", timeout.String())
 		a.graph.Close()
 		shutdown, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
@@ -107,6 +112,7 @@ func (a *application) serve(ctx context.Context, listener net.Listener, timeout 
 		if err = <-finished; err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return fmt.Errorf("serve HTTP: %w", err)
 		}
+		slog.Info("shutdown finished")
 		return nil
 	}
 }

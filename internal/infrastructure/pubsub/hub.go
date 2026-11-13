@@ -3,6 +3,7 @@ package pubsub
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 
 	"OzonBankTestTask/internal/broker"
@@ -52,9 +53,11 @@ func (h *Hub) Subscribe(ctx context.Context, postID uuid.UUID) (broker.Stream, e
 		return broker.Stream{}, err
 	}
 	if h.closed {
+		slog.WarnContext(ctx, "subscription rejected", "reason", "hub stopped", "post_id", postID)
 		return broker.Stream{}, broker.ErrClosed
 	}
 	if h.count >= h.config.MaxSubscriptions {
+		slog.WarnContext(ctx, "subscription rejected", "reason", "limit", "post_id", postID)
 		return broker.Stream{}, broker.ErrLimitReached
 	}
 	s := &subscriber{postID: postID, comments: make(chan comment.Comment, h.config.BufferSize), done: make(chan struct{})}
@@ -69,6 +72,7 @@ func (h *Hub) Subscribe(ctx context.Context, postID uuid.UUID) (broker.Stream, e
 		h.remove(s)
 	}
 	s.stop = context.AfterFunc(ctx, cancel)
+	slog.InfoContext(ctx, "subscription started", "post_id", postID, "subscriptions", h.count)
 	return broker.Stream{Comments: s.comments, Done: s.done, Cancel: cancel}, nil
 }
 
@@ -83,6 +87,7 @@ func (h *Hub) Publish(value comment.Comment) {
 		select {
 		case s.comments <- value.Clone():
 		default:
+			slog.Warn("subscriber dropped", "reason", "queue full", "post_id", value.PostID)
 			h.remove(s)
 		}
 	}
@@ -91,6 +96,9 @@ func (h *Hub) Publish(value comment.Comment) {
 func (h *Hub) Close() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	if !h.closed {
+		slog.Info("subscription hub stopped", "subscriptions", h.count)
+	}
 	h.closed = true
 	for _, subscribers := range h.byPost {
 		for s := range subscribers {
