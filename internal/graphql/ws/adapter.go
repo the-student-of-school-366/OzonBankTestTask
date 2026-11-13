@@ -90,6 +90,12 @@ func (c *connection) WriteJSON(value any) error {
 	}
 	ctx, cancel := context.WithTimeout(c.ctx, c.writeTimeout)
 	defer cancel()
+	// Библиотека может получить свободную блокировку записи даже когда
+	// контекст уже отменён, поэтому проверяем его до начала записи.
+	if err := ctx.Err(); err != nil {
+		_ = c.Close()
+		return err
+	}
 	err = c.raw.Write(ctx, websocket.MessageText, data)
 	if err != nil {
 		// Закрыть также reader: таймаут до захвата writer-lock сам по себе
@@ -107,6 +113,7 @@ func (c *connection) Close() error {
 	c.mu.Lock()
 	if c.readTimer != nil {
 		c.readTimer.Stop()
+		c.readTimer = nil
 	}
 	c.stop()
 	c.mu.Unlock()
@@ -122,9 +129,31 @@ func (c *connection) SetReadDeadline(deadline time.Time) error {
 	defer c.mu.Unlock()
 	if c.readTimer != nil {
 		c.readTimer.Stop()
+		c.readTimer = nil
 	}
 	if !deadline.IsZero() && c.ctx.Err() == nil {
-		c.readTimer = time.AfterFunc(time.Until(deadline), func() { _ = c.Close() })
+		var timer *time.Timer
+		timer = time.AfterFunc(time.Until(deadline), func() {
+			c.mu.Lock()
+			expired := c.takeReadDeadlineLocked(timer)
+			c.mu.Unlock()
+			if expired {
+				_ = c.Close()
+			}
+		})
+		c.readTimer = timer
 	}
 	return nil
+}
+
+// takeReadDeadlineLocked вызывается с удержанием c.mu.
+func (c *connection) takeReadDeadlineLocked(timer *time.Timer) bool {
+	if c.readTimer != timer {
+		return false
+	}
+	c.readTimer = nil
+	// Зафиксировать истечение до освобождения mutex: новая установка
+	// deadline не должна возобновить уже закрывающееся соединение.
+	c.cancel()
+	return true
 }

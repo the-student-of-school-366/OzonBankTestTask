@@ -3,17 +3,18 @@ package subscription
 import (
 	"context"
 
+	"OzonBankTestTask/internal/broker"
 	"OzonBankTestTask/internal/domain"
 	"OzonBankTestTask/internal/dto"
 )
 
 type UseCase struct {
 	posts  PostReader
-	broker Broker
+	broker broker.Broker
 }
 
-func New(posts PostReader, broker Broker) *UseCase {
-	return &UseCase{posts: posts, broker: broker}
+func New(posts PostReader, events broker.Broker) *UseCase {
+	return &UseCase{posts: posts, broker: events}
 }
 
 // CommentAdded подписывает на новые корни и ответы существующего поста.

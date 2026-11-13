@@ -1,7 +1,6 @@
 package comment_test
 
 import (
-	"OzonBankTestTask/internal/usecase"
 	"context"
 	"errors"
 	"testing"
@@ -128,7 +127,7 @@ func TestCommentPageValidationBeforeAnyBatch(t *testing.T) {
 	if _, err := u.ListReplies(context.Background(), validID, dto.PageInput{After: &cursor}); !errors.Is(err, domain.ErrInvalidCursor) {
 		t.Fatal(err)
 	}
-	roots := make([]dto.RootPageInput, usecase.MaxBatchSize+1)
+	roots := make([]dto.RootPageInput, page.MaxBatchSize+1)
 	for i := range roots {
 		roots[i].PostID = validID
 	}

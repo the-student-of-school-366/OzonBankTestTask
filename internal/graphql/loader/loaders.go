@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"OzonBankTestTask/internal/domain"
+	"OzonBankTestTask/internal/domain/page"
 	"OzonBankTestTask/internal/dto"
 	"OzonBankTestTask/internal/pagination"
-	"OzonBankTestTask/internal/usecase"
 
 	"github.com/vikstrous/dataloadgen"
 )
@@ -95,7 +95,7 @@ func newLoader[K comparable, V any](fetch func(context.Context, []K) ([]V, error
 			return nil, []error{fmt.Errorf("%w: batch returned %d values for %d keys", domain.ErrStorage, len(values), len(keys))}
 		}
 		return values, nil
-	}, dataloadgen.WithBatchCapacity(usecase.MaxBatchSize), dataloadgen.WithWait(5*time.Millisecond))
+	}, dataloadgen.WithBatchCapacity(page.MaxBatchSize), dataloadgen.WithWait(5*time.Millisecond))
 }
 
 // Мутации выполняются последовательно. Полная очистка простая и сохраняет актуальность

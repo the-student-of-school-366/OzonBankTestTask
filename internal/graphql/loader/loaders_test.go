@@ -10,7 +10,6 @@ import (
 	"OzonBankTestTask/internal/dto"
 	"OzonBankTestTask/internal/graphql/loader/mocks"
 	"OzonBankTestTask/internal/pagination"
-	"OzonBankTestTask/internal/usecase"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
@@ -75,7 +74,7 @@ func TestLoaderSplitsLargeBatch(t *testing.T) {
 	defer mu.Unlock()
 	var seen []string
 	for _, batch := range batches {
-		require.LessOrEqual(t, len(batch), usecase.MaxBatchSize)
+		require.LessOrEqual(t, len(batch), page.MaxBatchSize)
 		seen = append(seen, batch...)
 	}
 	require.ElementsMatch(t, ids, seen)

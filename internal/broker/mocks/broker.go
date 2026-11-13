@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	subscription "OzonBankTestTask/internal/usecase/subscription"
+	broker "OzonBankTestTask/internal/broker"
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
@@ -17,22 +17,22 @@ type Broker struct {
 }
 
 // Subscribe provides a mock function with given fields: _a0, _a1
-func (_m *Broker) Subscribe(_a0 context.Context, _a1 uuid.UUID) (subscription.Stream, error) {
+func (_m *Broker) Subscribe(_a0 context.Context, _a1 uuid.UUID) (broker.Stream, error) {
 	ret := _m.Called(_a0, _a1)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Subscribe")
 	}
 
-	var r0 subscription.Stream
+	var r0 broker.Stream
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (subscription.Stream, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (broker.Stream, error)); ok {
 		return rf(_a0, _a1)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) subscription.Stream); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) broker.Stream); ok {
 		r0 = rf(_a0, _a1)
 	} else {
-		r0 = ret.Get(0).(subscription.Stream)
+		r0 = ret.Get(0).(broker.Stream)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
