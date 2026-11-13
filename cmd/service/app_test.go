@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -119,4 +120,32 @@ func TestPostgresApplicationPersistsAcrossRestart(t *testing.T) {
 func TestInvalidStorageFailsStartup(t *testing.T) {
 	_, err := newApplication(t.Context(), config{storage: "invalid"})
 	require.Error(t, err)
+}
+
+func TestSandboxIsOptionalAndGraphQLRemainsAvailable(t *testing.T) {
+	for _, enabled := range []bool{true, false} {
+		t.Run(fmt.Sprintf("enabled=%t", enabled), func(t *testing.T) {
+			app, err := newApplication(t.Context(), config{storage: "memory", sandboxEnabled: enabled})
+			require.NoError(t, err)
+			defer app.close()
+			server := httptest.NewServer(app.server.Handler)
+			defer server.Close()
+			resp, err := http.Get(server.URL + "/sandbox")
+			require.NoError(t, err)
+			defer resp.Body.Close()
+			if !enabled {
+				require.Equal(t, http.StatusNotFound, resp.StatusCode)
+			} else {
+				require.Equal(t, http.StatusOK, resp.StatusCode)
+				require.Contains(t, resp.Header.Get("Content-Type"), "text/html")
+				body, err := io.ReadAll(resp.Body)
+				require.NoError(t, err)
+				require.Contains(t, string(body), "embeddable-sandbox.cdn.apollographql.com")
+				require.Contains(t, string(body), `window.location.origin + "/graphql"`)
+			}
+			id := createPost(t, server.URL+"/graphql")
+			result := graphqlRequest(t, server.URL+"/graphql", fmt.Sprintf(`{post(id:%q){id}}`, id))
+			require.JSONEq(t, fmt.Sprintf(`{"id":%q}`, id), string(result["post"]))
+		})
+	}
 }

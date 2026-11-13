@@ -11,6 +11,7 @@ type config struct {
 	storage         string
 	databaseURL     string
 	shutdownTimeout time.Duration
+	sandboxEnabled  bool
 }
 
 func loadConfig() (config, error) {
@@ -18,5 +19,5 @@ func loadConfig() (config, error) {
 	if err != nil {
 		return config{}, err
 	}
-	return config{address: settings.HTTPAddress, storage: settings.Storage, databaseURL: settings.DatabaseURL, shutdownTimeout: settings.ShutdownTimeout}, nil
+	return config{address: settings.HTTPAddress, storage: settings.Storage, databaseURL: settings.DatabaseURL, shutdownTimeout: settings.ShutdownTimeout, sandboxEnabled: settings.Sandbox.Enabled}, nil
 }

@@ -7,6 +7,7 @@
 
 - `internal/api`: конфигурация, контекст и алиасы интерфейсов usecase.
 - `internal/api/handler`: сборка обработчика, проверка HTTP-запросов, маршрутизация WebSocket и HTTP-ошибки.
+- `internal/api/sandbox`: страница Apollo Sandbox для локального тестирования.
 - `internal/infrastructure/middleware`: request ID, демонстрационный actor ID и HTTP-таймаут.
 - `internal/infrastructure/pubsub`: хаб событий с ограниченными очередями и числом подписок.
 - `internal/usecase/subscription`: проверка существования поста, подписка и преобразование событий в DTO.

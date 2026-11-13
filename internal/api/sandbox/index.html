@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apollo Sandbox</title>
+  <style>html, body, #sandbox { height: 100%; margin: 0; }</style>
+</head>
+<body>
+  <div id="sandbox">Загрузка Apollo Sandbox. Для загрузки интерфейса требуется интернет.</div>
+  <noscript>Для работы Apollo Sandbox включите JavaScript.</noscript>
+  <script src="https://embeddable-sandbox.cdn.apollographql.com/_latest/embeddable-sandbox.umd.production.min.js"></script>
+  <script>
+    if (window.EmbeddedSandbox) {
+      document.getElementById("sandbox").textContent = "";
+      new window.EmbeddedSandbox({
+        target: "#sandbox",
+        initialEndpoint: window.location.origin + "/graphql"
+      });
+    }
+  </script>
+</body>
+</html>

@@ -6,6 +6,7 @@ services:
     environment:
       CONFIG_FILE: ${CONFIG_FILE:-}
       STORAGE: ${STORAGE:-}
+      SANDBOX_ENABLED: ${SANDBOX_ENABLED:-}
       PGHOST: ${PGHOST:-postgres}
       PGPORT: "5432"
       PGUSER: ${POSTGRES_USER:-}

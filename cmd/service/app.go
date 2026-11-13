@@ -11,6 +11,7 @@ import (
 
 	"OzonBankTestTask/internal/api"
 	"OzonBankTestTask/internal/api/handler"
+	"OzonBankTestTask/internal/api/sandbox"
 	"OzonBankTestTask/internal/infrastructure/pubsub"
 	"OzonBankTestTask/internal/repositories/memory"
 	"OzonBankTestTask/internal/repositories/postgres"
@@ -67,6 +68,9 @@ func newApplication(ctx context.Context, c config) (*application, error) {
 	}
 	mux := http.NewServeMux()
 	mux.Handle("/graphql", graph)
+	if c.sandboxEnabled {
+		mux.Handle("/sandbox", sandbox.NewHandler())
+	}
 	return &application{
 		server: &http.Server{Addr: c.address, Handler: mux, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second},
 		graph:  graph, hub: hub, closeStorage: closeStorage,

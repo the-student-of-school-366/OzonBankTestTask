@@ -32,8 +32,13 @@ type Postgres struct {
 	SSLMode  string `yaml:"sslmode"`
 }
 
+type Sandbox struct {
+	Enabled bool `yaml:"enabled"`
+}
+
 type Config struct {
 	Storage         string        `yaml:"storage"`
+	Sandbox         Sandbox       `yaml:"sandbox"`
 	HTTP            HTTP          `yaml:"http"`
 	Postgres        Postgres      `yaml:"postgres"`
 	HTTPAddress     string        `yaml:"-"`
@@ -71,6 +76,12 @@ func Load() (Config, error) {
 	}
 	if c.Storage != "memory" && c.Storage != "postgres" {
 		return Config{}, fmt.Errorf("STORAGE must be memory or postgres")
+	}
+	if value := os.Getenv("SANDBOX_ENABLED"); value != "" {
+		c.Sandbox.Enabled, err = strconv.ParseBool(value)
+		if err != nil {
+			return Config{}, fmt.Errorf("SANDBOX_ENABLED must be true or false")
+		}
 	}
 	if value := os.Getenv("HTTP_ADDR"); value != "" {
 		c.HTTPAddress = value

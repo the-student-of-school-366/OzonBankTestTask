@@ -9,7 +9,7 @@ import (
 )
 
 func TestLoadConfig(t *testing.T) {
-	for _, name := range []string{"HTTP_ADDR", "STORAGE", "DATABASE_URL", "SHUTDOWN_TIMEOUT", "PGHOST", "PGPORT", "PGUSER", "PGPASSWORD", "PGDATABASE", "PGSSLMODE"} {
+	for _, name := range []string{"HTTP_ADDR", "STORAGE", "SANDBOX_ENABLED", "DATABASE_URL", "SHUTDOWN_TIMEOUT", "PGHOST", "PGPORT", "PGUSER", "PGPASSWORD", "PGDATABASE", "PGSSLMODE"} {
 		t.Setenv(name, "")
 	}
 	path, err := filepath.Abs("../../internal/config/config.yaml")
@@ -18,6 +18,7 @@ func TestLoadConfig(t *testing.T) {
 	c, err := loadConfig()
 	require.NoError(t, err)
 	require.Equal(t, "postgres", c.storage)
+	require.True(t, c.sandboxEnabled)
 	require.Equal(t, "0.0.0.0:8081", c.address)
 	require.Equal(t, 10*time.Second, c.shutdownTimeout)
 	require.Contains(t, c.databaseURL, "localhost:55432")

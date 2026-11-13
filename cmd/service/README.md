@@ -8,8 +8,9 @@ $env:STORAGE='memory'
 go run ./cmd/service
 ```
 
-GraphQL HTTP и WebSocket доступны на `http://localhost:8081/graphql` и
-`ws://localhost:8081/graphql`. Подробности операций и подписок — в
+Apollo Sandbox доступен на `http://localhost:8081/sandbox` (для загрузки
+интерфейса нужен интернет). GraphQL HTTP и WebSocket доступны на
+`http://localhost:8081/graphql` и `ws://localhost:8081/graphql`. Подробности операций и подписок — в
 [README API](../../internal/api/README.md). Для демонстрации мутаций передаётся
 заголовок `X-User-ID`; он не является аутентификацией.
 
@@ -63,6 +64,7 @@ go run ./cmd/service
 | --- | --- |
 | `CONFIG_FILE` | Путь к YAML; по умолчанию `internal/config/config.yaml`. |
 | `STORAGE` | `memory` или `postgres`. |
+| `SANDBOX_ENABLED` | `true` или `false`; переопределяет `sandbox.enabled` в YAML. |
 | `DATABASE_URL` | Используется вместо параметров PostgreSQL из YAML. |
 | `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGSSLMODE` | Отдельные параметры PostgreSQL. При заданном `DATABASE_URL` pgx может использовать их для отсутствующих в строке параметров. |
 | `HTTP_ADDR` | Адрес TCP-сервера, например `127.0.0.1:8081`. |
@@ -71,6 +73,8 @@ go run ./cmd/service
 В YAML находятся только демонстрационные учётные данные; настоящие секреты
 следует хранить вне репозитория. В Docker Compose PostgreSQL по умолчанию имеет
 те же учётные данные, а его хост для приложения — `postgres`.
+Sandbox включён в пример конфигурации для разработки; отключите его значением
+`sandbox.enabled: false` или `SANDBOX_ENABLED=false`, если интерфейс не нужен.
 
 SIGINT/SIGTERM запускают остановку: GraphQL закрывает WebSocket-соединения, HTTP
 перестаёт принимать новые запросы и ждёт текущие до таймаута, затем закрываются

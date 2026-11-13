@@ -14,6 +14,8 @@ import (
 )
 
 const example = `storage: postgres
+sandbox:
+  enabled: true
 http:
   host: 127.0.0.1
   port: 8081
@@ -29,7 +31,7 @@ postgres:
 
 func setFile(t *testing.T, contents string) string {
 	t.Helper()
-	for _, name := range []string{"STORAGE", "HTTP_ADDR", "SHUTDOWN_TIMEOUT", "DATABASE_URL", "PGHOST", "PGPORT", "PGUSER", "PGPASSWORD", "PGDATABASE", "PGSSLMODE"} {
+	for _, name := range []string{"STORAGE", "SANDBOX_ENABLED", "HTTP_ADDR", "SHUTDOWN_TIMEOUT", "DATABASE_URL", "PGHOST", "PGPORT", "PGUSER", "PGPASSWORD", "PGDATABASE", "PGSSLMODE"} {
 		t.Setenv(name, "")
 	}
 	path := filepath.Join(t.TempDir(), "config.yaml")
@@ -43,6 +45,7 @@ func TestLoadYAMLAndEscapedCredentials(t *testing.T) {
 	c, err := config.Load()
 	require.NoError(t, err)
 	require.Equal(t, "postgres", c.Storage)
+	require.True(t, c.Sandbox.Enabled)
 	require.Equal(t, "127.0.0.1:8081", c.HTTPAddress)
 	require.Equal(t, 12*time.Second, c.ShutdownTimeout)
 	u, err := url.Parse(c.DatabaseURL)
@@ -59,6 +62,7 @@ func TestLoadYAMLAndEscapedCredentials(t *testing.T) {
 func TestEnvironmentOverridesYAML(t *testing.T) {
 	setFile(t, example)
 	t.Setenv("STORAGE", "postgres")
+	t.Setenv("SANDBOX_ENABLED", "false")
 	t.Setenv("HTTP_ADDR", "[::1]:9000")
 	t.Setenv("SHUTDOWN_TIMEOUT", "3s")
 	t.Setenv("PGHOST", "::1")
@@ -69,6 +73,7 @@ func TestEnvironmentOverridesYAML(t *testing.T) {
 	t.Setenv("PGSSLMODE", "disable")
 	c, err := config.Load()
 	require.NoError(t, err)
+	require.False(t, c.Sandbox.Enabled)
 	require.Equal(t, "[::1]:9000", c.HTTPAddress)
 	require.Equal(t, 3*time.Second, c.ShutdownTimeout)
 	u, err := url.Parse(c.DatabaseURL)
@@ -105,6 +110,12 @@ func TestInvalidConfiguration(t *testing.T) {
 		t.Setenv("CONFIG_FILE", path+"-missing")
 		_, err := config.Load()
 		require.ErrorContains(t, err, "open config")
+	})
+	t.Run("invalid sandbox setting", func(t *testing.T) {
+		setFile(t, example)
+		t.Setenv("SANDBOX_ENABLED", "invalid")
+		_, err := config.Load()
+		require.ErrorContains(t, err, "SANDBOX_ENABLED")
 	})
 	t.Run("memory without postgres settings", func(t *testing.T) {
 		setFile(t, "storage: memory\nhttp:\n  host: localhost\n  port: 8080\n  shutdown_timeout: 1s\n")

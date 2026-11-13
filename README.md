@@ -18,8 +18,8 @@ Compose собирает приложение и запускает PostgreSQL. 
 миграции при старте. По умолчанию используется PostgreSQL, как задано в
 [`internal/config/config.yaml`](internal/config/config.yaml); непустая переменная
 `STORAGE` может переопределить это значение. HTTP GraphQL доступен на `http://localhost:8081/graphql`,
-WebSocket — на `ws://localhost:8081/graphql`. Это API, а не страница с
-интерактивным редактором запросов. Если первый запрос пришёл до завершения
+WebSocket — на `ws://localhost:8081/graphql`. Для интерактивной работы откройте
+[Apollo Sandbox](http://localhost:8081/sandbox). Если первый запрос пришёл до завершения
 миграций, дождитесь сообщения `service started` в журналах:
 
 ```powershell
@@ -64,6 +64,7 @@ Compose переопределяет адрес базы на `postgres:5432` в
 | Переменная | Что переопределяет |
 | --- | --- |
 | `STORAGE` | `postgres` или `memory` |
+| `SANDBOX_ENABLED` | `true` или `false`; переопределяет `sandbox.enabled` |
 | `HTTP_ADDR` | Полный адрес HTTP-сервера, например `127.0.0.1:8081` |
 | `SHUTDOWN_TIMEOUT` | Таймаут остановки, например `10s` |
 | `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGSSLMODE` | Соответствующие поля PostgreSQL |
@@ -78,6 +79,22 @@ Compose переопределяет адрес базы на `postgres:5432` в
 репозитория, например в переменных окружения или в отдельном файле конфигурации.
 
 ## Ручная проверка GraphQL
+
+### Apollo Sandbox
+
+Откройте `http://localhost:8081/sandbox`: страница автоматически подключится к
+`/graphql` на том же хосте. Для загрузки интерфейса требуется интернет: скрипт и
+интерфейс Apollo загружаются с серверов Apollo. В Sandbox можно просматривать
+схему, выполнять запросы и мутации. Для мутаций откройте вкладку **Headers**,
+нажмите **New header** и добавьте `X-User-ID` со значением, например, `alice`.
+
+Подписки настраиваются в **Connection settings**: адрес подписки —
+`ws://localhost:8081/graphql`, реализация — **graphql-ws**
+(подпротокол `graphql-transport-ws`). Для отключения страницы установите
+`sandbox.enabled: false` в YAML либо `SANDBOX_ENABLED=false`; в Docker Compose
+после изменения YAML пересоберите образ. Sandbox предназначен для разработки.
+
+### Запросы из PowerShell
 
 Сначала определите функцию для HTTP-запросов. Заголовок `X-User-ID` задаёт
 демонстрационного пользователя для мутаций. Это не аутентификация: клиент может
