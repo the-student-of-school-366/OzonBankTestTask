@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"OzonBankTestTask/internal/api"
+	"OzonBankTestTask/internal/api/handler"
 	domaincomment "OzonBankTestTask/internal/domain/comment"
 	"OzonBankTestTask/internal/domain/page"
 	domainpost "OzonBankTestTask/internal/domain/post"
@@ -36,7 +37,7 @@ func TestHTTPWithRealUseCases(t *testing.T) {
 	t.Cleanup(hub.Close)
 	comments := commentusecase.New(commentRepository, hub, usecase.WithClock(func() time.Time { return now }))
 	subscriptions := subscription.New(posts, hub)
-	h, err := api.NewHandler(posts, comments, subscriptions, api.Config{Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	h, err := handler.NewHandler(posts, comments, subscriptions, api.Config{Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
 	require.NoError(t, err)
 	t.Cleanup(h.Close)
 	var saved domainpost.Post

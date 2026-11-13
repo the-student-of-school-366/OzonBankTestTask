@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"OzonBankTestTask/internal/api"
+	"OzonBankTestTask/internal/api/handler"
 	"OzonBankTestTask/internal/infrastructure/pubsub"
 	"OzonBankTestTask/internal/repositories/memory"
 	"OzonBankTestTask/internal/repositories/postgres"
@@ -22,7 +23,7 @@ import (
 
 type application struct {
 	server       *http.Server
-	graph        *api.Handler
+	graph        *handler.Handler
 	hub          *pubsub.Hub
 	closeStorage func()
 }
@@ -58,7 +59,7 @@ func newApplication(ctx context.Context, c config) (*application, error) {
 	}
 	postService := postusecase.New(posts)
 	commentService := commentusecase.New(comments, hub)
-	graph, err := api.NewHandler(postService, commentService, subscription.New(postService, hub), api.Config{})
+	graph, err := handler.NewHandler(postService, commentService, subscription.New(postService, hub), api.Config{})
 	if err != nil {
 		hub.Close()
 		closeStorage()

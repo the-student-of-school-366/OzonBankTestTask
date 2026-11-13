@@ -1,11 +1,12 @@
 # GraphQL API
 
-Пакет `api` предоставляет `http.Handler` поверх usecase. Транспорт использует
+Пакет `api/handler` предоставляет `http.Handler` поверх usecase. Транспорт использует
 существующие DTO; домен и usecase не зависят от GraphQL.
 
 Код разделён по ответственности:
 
-- `internal/api`: публичный `NewHandler`, конфигурация и HTTP-ограничения.
+- `internal/api`: конфигурация, контекст и алиасы интерфейсов usecase.
+- `internal/api/handler`: сборка обработчика, проверка HTTP-запросов, маршрутизация WebSocket и HTTP-ошибки.
 - `internal/infrastructure/middleware`: request ID, демонстрационный actor ID и HTTP-таймаут.
 - `internal/infrastructure/pubsub`: хаб событий с ограниченными очередями и числом подписок.
 - `internal/usecase/subscription`: проверка существования поста, подписка и преобразование событий в DTO.
@@ -46,7 +47,7 @@ defer hub.Close()
 posts := postusecase.New(postRepository)
 comments := commentusecase.New(commentRepository, hub)
 subscriptions := subscription.New(posts, hub)
-graph, err := api.NewHandler(posts, comments, subscriptions, api.Config{})
+graph, err := handler.NewHandler(posts, comments, subscriptions, api.Config{})
 if err != nil {
     return err
 }
@@ -66,8 +67,8 @@ server := &http.Server{
 Репозитории PostgreSQL и создание общего пула описаны в
 [README PostgreSQL](../repositories/postgres/README.md), а реализация в памяти — в
 [README memory](../repositories/memory/README.md). Один и тот же `hub` нужно передать
-в usecase создания комментария и в usecase подписки. `NewHandler` теперь принимает
-usecase подписок третьим аргументом и возвращает `*api.Handler` с методом `Close()`.
+в usecase создания комментария и в usecase подписки. `handler.NewHandler` принимает
+usecase подписок третьим аргументом и возвращает `*handler.Handler` с методом `Close()`.
 
 При остановке вызвать `graph.Close()`, затем `server.Shutdown(ctx)` и `hub.Close()`.
 `graph.Close()` отменяет активные WebSocket-соединения, включая ожидающие

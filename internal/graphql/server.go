@@ -30,7 +30,7 @@ func (s *Server) Close() { s.cancel() }
 type websocketKey struct{}
 
 // NewServer собирает GraphQL-исполнитель из проверенных зависимостей и настроек.
-// HTTP-ограничения и метаданные запроса устанавливает api.NewHandler.
+// HTTP-ограничения и метаданные запроса устанавливает api/handler.NewHandler.
 func NewServer(posts PostUseCase, comments CommentUseCase, subscriptions SubscriptionUseCase, config Config) *Server {
 	lifetime, cancel := context.WithCancel(context.Background())
 	server := handler.New(generated.NewExecutableSchema(generated.Config{

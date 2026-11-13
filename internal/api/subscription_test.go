@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"OzonBankTestTask/internal/api"
+	"OzonBankTestTask/internal/api/handler"
 	"OzonBankTestTask/internal/domain"
 	"OzonBankTestTask/internal/domain/comment"
 	"OzonBankTestTask/internal/domain/page"
@@ -52,7 +53,7 @@ func (b *observedBroker) Subscribe(ctx context.Context, id uuid.UUID) (subscript
 }
 
 type subscriptionFixture struct {
-	handler  *api.Handler
+	handler  *handler.Handler
 	server   *httptest.Server
 	posts    *graphmocks.PostUseCase
 	comments *commentmocks.Repository
@@ -66,7 +67,7 @@ func newSubscriptionFixture(t *testing.T, config api.Config) subscriptionFixture
 	broker := &observedBroker{Hub: hub, registered: make(chan struct{}, 16), canceled: make(chan struct{}, 16)}
 	posts, comments := graphmocks.NewPostUseCase(t), commentmocks.NewRepository(t)
 	config.Logger = slog.New(slog.NewTextHandler(io.Discard, nil))
-	h, err := api.NewHandler(posts, commentusecase.New(comments, hub), subscription.New(posts, broker), config)
+	h, err := handler.NewHandler(posts, commentusecase.New(comments, hub), subscription.New(posts, broker), config)
 	require.NoError(t, err)
 	server := httptest.NewServer(h)
 	t.Cleanup(func() { h.Close(); hub.Close(); server.Close() })

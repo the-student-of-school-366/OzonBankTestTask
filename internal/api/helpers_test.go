@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"OzonBankTestTask/internal/api"
+	"OzonBankTestTask/internal/api/handler"
 	"OzonBankTestTask/internal/dto"
 	"OzonBankTestTask/internal/graphql/mocks"
 
@@ -31,7 +32,7 @@ func newHandler(t *testing.T, config api.Config) (http.Handler, *mocks.PostUseCa
 	t.Helper()
 	posts, comments := mocks.NewPostUseCase(t), mocks.NewCommentUseCase(t)
 	config.Logger = slog.New(slog.NewTextHandler(io.Discard, nil))
-	h, err := api.NewHandler(posts, comments, mocks.NewSubscriptionUseCase(t), config)
+	h, err := handler.NewHandler(posts, comments, mocks.NewSubscriptionUseCase(t), config)
 	require.NoError(t, err)
 	t.Cleanup(h.Close)
 	return h, posts, comments

@@ -16,7 +16,8 @@ type Config struct {
 	WebsocketOrigins []string
 }
 
-func (c Config) withDefaults() (Config, error) {
+// WithDefaults заполняет настройки по умолчанию и проверяет допустимые значения.
+func (c Config) WithDefaults() (Config, error) {
 	if c.MaxBodyBytes == 0 {
 		c.MaxBodyBytes = 1 << 20
 	}

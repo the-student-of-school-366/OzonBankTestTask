@@ -1,4 +1,4 @@
-package api_test
+package handler_test
 
 import (
 	"context"
@@ -51,6 +51,35 @@ func TestHTTPTransportBoundaries(t *testing.T) {
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
 			assertCode(t, response, tc.code)
 			require.NotEmpty(t, w.Header().Get("X-Request-ID"))
+			require.Equal(t, w.Header().Get("X-Request-ID"), response.Errors[0].Extensions["requestId"])
+		})
+	}
+}
+
+func TestRequestAndUpgradeBoundaries(t *testing.T) {
+	for _, tc := range []struct {
+		name, method, target, upgrade string
+		status                        int
+		code                          string
+	}{
+		{"long GET", http.MethodGet, "/graphql?" + strings.Repeat("x", 65), "", http.StatusRequestURITooLong, "PAYLOAD_TOO_LARGE"},
+		{"upgrade with POST", http.MethodPost, "/graphql", "websocket", http.StatusBadRequest, "BAD_USER_INPUT"},
+		{"unsupported upgrade", http.MethodGet, "/graphql", "h2c", http.StatusBadRequest, "BAD_USER_INPUT"},
+		{"long upgrade URL", http.MethodGet, "/graphql?" + strings.Repeat("x", 65), "websocket", http.StatusRequestURITooLong, "PAYLOAD_TOO_LARGE"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h, _, _ := newHandler(t, api.Config{MaxBodyBytes: 64})
+			r := httptest.NewRequest(tc.method, tc.target, nil)
+			if tc.upgrade != "" {
+				r.Header.Set("Upgrade", tc.upgrade)
+			}
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, r)
+			require.Equal(t, tc.status, w.Code)
+			require.Equal(t, "no-store", w.Header().Get("Cache-Control"))
+			var response graphResponse
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+			assertCode(t, response, tc.code)
 			require.Equal(t, w.Header().Get("X-Request-ID"), response.Errors[0].Extensions["requestId"])
 		})
 	}
