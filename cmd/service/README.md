@@ -1,83 +1,55 @@
 # Запуск сервиса
 
-Из корня проекта в PowerShell:
+Сборка зависимостей и HTTP-сервер находятся в этом каталоге. Общий порядок запуска и адреса страниц описаны в [корневом README](../../README.md).
+
+## Локально
+
+Из корня проекта:
 
 ```powershell
-# Хранилище в памяти.
-$env:STORAGE='memory'
+$env:STORAGE = 'memory'
 go run ./cmd/service
 ```
 
-Apollo Sandbox доступен на `http://localhost:8081/sandbox` (для загрузки
-интерфейса нужен интернет). GraphQL HTTP и WebSocket доступны на
-`http://localhost:8081/graphql` и `ws://localhost:8081/graphql`. Подробности операций и подписок — в
-[README API](../../internal/api/README.md). Для демонстрации мутаций передаётся
-заголовок `X-User-ID`; он не является аутентификацией.
+GraphQL доступен на `http://localhost:8081/graphql`, подписки — на `ws://localhost:8081/graphql`. Apollo Sandbox открывается на `http://localhost:8081/sandbox`; для загрузки интерфейса нужен интернет. Мутации различают автора по заголовку `X-User-ID`.
 
-Запуск приложения и PostgreSQL через Compose:
+PostgreSQL из Compose, приложение с локальной машины:
 
 ```powershell
-docker compose up --build -d --wait
+docker compose up -d --wait postgres
+go run ./cmd/service
 ```
 
-Сервис доступен на `http://localhost:8081/graphql`. Страница проверки —
-на `http://localhost:8082`. Compose ждёт готовности
-PostgreSQL перед запуском приложения; приложение применяет миграции при старте.
-Учётные данные и имя базы можно задать через `POSTGRES_USER`, `POSTGRES_PASSWORD`
-и `POSTGRES_DB`. PostgreSQL применяет их при первой инициализации тома: если том
-уже существует, новые значения нужно также изменить в самой базе. `docker compose down`
-останавливает контейнеры и сохраняет том с данными.
+`STORAGE` можно не задавать: по умолчанию используется PostgreSQL. Сервис применяет миграции под advisory lock и открывает пул до приёма запросов. Ошибка миграции или соединения завершает процесс. Отдельно миграции запускаются так:
 
-Для запуска только приложения в режиме памяти, без контейнера PostgreSQL:
+```powershell
+go run ./cmd/migrate
+```
+
+Только контейнер приложения, без PostgreSQL и страницы проверки:
 
 ```powershell
 docker compose run --build --rm --no-deps --service-ports -e STORAGE=memory app
 ```
 
-Эта команда использует порт 8081; сначала остановите другое приложение на этом порту.
-При обычном `docker compose up` PostgreSQL запускается как зависимость даже при
-`STORAGE=memory`.
+Команда занимает порт `8081`. При обычном `docker compose up` контейнер PostgreSQL запускается как зависимость, даже если у приложения задано `STORAGE=memory`.
 
-Итоговый образ содержит статически собранный сервис и минимальное окружение с
-сертификатами CA; компилятор Go остаётся на этапе сборки. Процесс работает от
-непривилегированного пользователя. Настройки читаются из YAML; Compose заменяет
-хост базы именем `postgres`. Адрес `localhost` внутри контейнера указывает на
-сам контейнер.
+## Настройки
 
-Для локального запуска сервиса с PostgreSQL из Compose:
-
-```powershell
-docker compose up -d --wait postgres
-$env:STORAGE='postgres' # можно не задавать: PostgreSQL используется по умолчанию
-go run ./cmd/service
-```
-
-При старте PostgreSQL-режима сервис применяет миграции под advisory lock и
-открывает пул до начала приёма запросов. Ошибка миграции или соединения завершает
-процесс с ошибкой. Для отдельного применения миграций доступна `go run ./cmd/migrate`.
-
-Основные настройки находятся в [config.yaml](../../internal/config/config.yaml).
-Локально путь к другому файлу задаётся через `CONFIG_FILE`; в контейнере такой
-файл должен быть доступен по указанному пути. Непустые переменные окружения
-переопределяют YAML:
+Файл настроек — [config.yaml](../../internal/config/config.yaml). Другой путь задаётся переменной `CONFIG_FILE`. Непустые переменные окружения заменяют поля YAML.
 
 | Переменная | Назначение |
 | --- | --- |
-| `CONFIG_FILE` | Путь к YAML; по умолчанию `internal/config/config.yaml`. |
+| `CONFIG_FILE` | Путь к YAML. По умолчанию `internal/config/config.yaml`. |
 | `STORAGE` | `memory` или `postgres`. |
-| `SANDBOX_ENABLED` | `true` или `false`; переопределяет `sandbox.enabled` в YAML. |
-| `DATABASE_URL` | Используется вместо параметров PostgreSQL из YAML. |
-| `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGSSLMODE` | Отдельные параметры PostgreSQL. При заданном `DATABASE_URL` pgx может использовать их для отсутствующих в строке параметров. |
-| `HTTP_ADDR` | Адрес TCP-сервера, например `127.0.0.1:8081`. |
+| `SANDBOX_ENABLED` | `true` или `false`. Заменяет `sandbox.enabled`. |
+| `DATABASE_URL` | Строка подключения вместо полей PostgreSQL из YAML. |
+| `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, `PGSSLMODE` | Отдельные параметры PostgreSQL. При заданном `DATABASE_URL` pgx берёт их для параметров, которых нет в строке. |
+| `HTTP_ADDR` | Адрес сервера, например `127.0.0.1:8081`. |
 | `SHUTDOWN_TIMEOUT` | Положительная Go-duration для завершения HTTP-запросов. |
 
-В YAML находятся только демонстрационные учётные данные; настоящие секреты
-следует хранить вне репозитория. В Docker Compose PostgreSQL по умолчанию имеет
-те же учётные данные, а его хост для приложения — `postgres`.
-Sandbox включён в пример конфигурации для разработки; отключите его значением
-`sandbox.enabled: false` или `SANDBOX_ENABLED=false`, если интерфейс не нужен.
+В YAML лежат демонстрационные учётные данные. В Compose хост базы для приложения — `postgres`: внутри контейнера `localhost` указывает на сам контейнер. Sandbox включён в пример конфигурации. Его отключают полем `sandbox.enabled: false` или переменной `SANDBOX_ENABLED=false`.
 
-SIGINT/SIGTERM запускают остановку: GraphQL закрывает WebSocket-соединения, HTTP
-перестаёт принимать новые запросы и ждёт текущие до таймаута, затем закрываются
-хаб подписок и пул базы. При превышении таймаута оставшиеся HTTP-соединения
-закрываются принудительно, а процесс сообщает об ошибке.
+## Остановка
+
+`SIGINT` и `SIGTERM` начинают остановку. GraphQL закрывает WebSocket-соединения, HTTP перестаёт принимать новые запросы и ждёт текущие до `SHUTDOWN_TIMEOUT`. Затем закрываются хаб подписок и пул базы. Если таймаут истёк, оставшиеся HTTP-соединения закрываются принудительно, и процесс завершается с ошибкой.
